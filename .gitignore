@@ -1,0 +1,84 @@
+# ─────────────────────────────────────────────────────────────
+# OpenClaw 钉选上下文插件 — Git 忽略规则
+# ─────────────────────────────────────────────────────────────
+
+# ── 依赖与构建产物 ───────────────────────────────────────────
+node_modules/
+dist/
+*.tsbuildinfo
+
+# ⚠️ 注意：dist/ 被忽略后，npm pack 会沿用 .gitignore 作为忽略规则
+#    （未提供 .npmignore 时），导致发布包缺失 dist/index.js，
+#    而 package.json 的 openclaw.runtimeExtensions 指向该文件。
+#    发布前请在 package.json 增加 files 白名单，或补一个 .npmignore。
+
+# ── 测试文件 ─────────────────────────────────────────────────
+# 测试目录
+test/
+tests/
+__tests__/
+__mocks__/
+test-fixtures/
+e2e/
+
+# 测试文件（含 OpenClaw 约定的 src/**/*.test.ts 就近放置形式）
+*.test.ts
+*.test.tsx
+*.test.js
+*.test.mjs
+*.test.cjs
+*.spec.ts
+*.spec.tsx
+*.spec.js
+*.spec.mjs
+*.spec.cjs
+
+# 覆盖率与测试报告
+coverage/
+*.lcov
+junit.xml
+
+# ── 隐私内容 ─────────────────────────────────────────────────
+# 插件运行时数据目录
+#   api.resolvePath("./data") → pinned_blocks.json（含用户钉选的全部内容）
+data/
+pinned_blocks.json
+
+# 环境变量与凭证
+.env
+.env.*
+!.env.example
+*.local
+*.key
+*.pem
+*.p12
+secrets/
+credentials*
+*_credentials.json
+
+# 日志
+*.log
+logs/
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+
+# ── 内部文档（审计 / 计划，不随仓库上传） ─────────────────────
+AUDIT.md
+AUDIT*.md
+*_audit.md
+审计*.md
+CHANGE_PLAN.md
+CHANGE_PLAN*.md
+*_plan.md
+计划*.md
+
+# ── 系统与编辑器 ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+
+# 构建配置需要随源码提交；test/ 内的配置仍由上面的规则屏蔽
+!/tsconfig.json

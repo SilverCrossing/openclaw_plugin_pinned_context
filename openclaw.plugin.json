@@ -1,0 +1,30 @@
+{
+  "id": "pinned-context",
+  "name": "Pinned Context Blocks",
+  "description": "用户可控的 strong 与 context 钉选块，支持私聊和群聊作用域",
+  "activation": {
+    "onStartup": true,
+    "onCommands": ["pin"]
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "maxBlocksPerSession": { "type": "integer", "default": 20, "description": "每个会话最多钉选块数" },
+      "maxLabelLength": { "type": "integer", "default": 20, "description": "单个块标签最大长度" },
+      "maxContentLength": { "type": "integer", "default": 500, "description": "单个块内容最大长度" },
+      "idleRetentionDays": { "type": "integer", "default": 7, "description": "idle 块保留天数" },
+      "idleRetentionCalls": { "type": "integer", "default": 10, "description": "idle 块保留 LLM 调用次数" },
+      "idleHardRetentionDays": { "type": "integer", "default": 30, "description": "idle 块最长保留天数" },
+      "tokenWarningThreshold": { "type": "integer", "default": 1000, "description": "token 警告阈值（0=不检查）" },
+      "enableInGroup": {
+        "type": "boolean",
+        "default": false,
+        "description": "是否在群聊中启用；频道和类型不明会话始终禁用"
+      },
+      "groupWhitelist": { "type": "array", "items": { "type": "string" }, "default": [], "description": "允许的群 ID 或完整群会话键，空数组表示所有群" },
+      "groupSharedAdminIds": { "type": "array", "items": { "type": "string" }, "default": [], "description": "可管理群共享块的发送者 ID" },
+      "groupStrongUserIds": { "type": "array", "items": { "type": "string" }, "default": [], "description": "可管理群个人 strong 块的发送者 ID" }
+    }
+  }
+}
