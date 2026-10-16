@@ -1,5 +1,7 @@
 # Pinned Context Blocks — OpenClaw 钉选上下文块
 
+语言：简体中文 · [English](README.en.md)
+
 手动保存长期约束和参考资料，在后续模型请求中持续提供相关内容。适配 OpenClaw 2026.10.2 的插件接口。
 
 ## 两级注入
