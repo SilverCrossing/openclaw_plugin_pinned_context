@@ -380,7 +380,7 @@ function helpText(): string {
 /pin pin <标签>                    长期锚定（永不过期）
 /pin unpin <标签>                  取消锚定
 /pin clear                         清空全部（需二次确认）
-/pin shared <子命令>              群共享块（仅群管理员可修改）
+/pin shared <子命令>              群共享块（仅配置的共享管理员可修改）
 
 状态说明：
 🟢 active  正常注入，不会被自动清理

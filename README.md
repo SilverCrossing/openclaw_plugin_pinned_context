@@ -47,6 +47,8 @@
 
 群聊默认关闭。开启后，普通成员可以管理自己的 `context` 块、查看群共享块；群共享块仅可由 `groupSharedAdminIds` 中的发言人管理。群个人 `strong` 块仅可由 `groupStrongUserIds` 或共享管理员管理。群共享块在该群所有成员发言时生效，群个人块只在本人发言时生效。缺少群 ID 或发言人 ID 时拒绝操作及注入；频道和类型不明会话始终禁用。
 
+插件只处理 OpenClaw 会话键中明确带有 `group:<群 ID>` 的群消息，并要求消息带有发送者 ID。Telegram、飞书等频道的规范群会话键符合这一形状；同群的 topic / per-sender 会话会归到同一群作用域。若频道把群房间表示为 `channel`，或将群会话合并进 `main` 等不含群 ID 的键，插件会拒绝处理，不能依靠 `enableInGroup` 强行开启。OpenClaw 自身的群准入、发送者白名单与提及规则先于插件生效；本插件的白名单是额外限制，不能代替这些频道规则。
+
 **与 AstrBot 的差异：**OpenClaw 外部插件的命令上下文没有跨平台统一的群管理员身份位，因此这里仅按配置的发送者 ID 白名单授权，不能自动继承平台群管理员身份。白名单可以填发送者 ID（所有已启用群通用），或 `<完整群会话键>::u:<发送者 ID>`（限定到该群）。群共享块或模型回复可能透露上下文内容，请勿保存秘密。
 
 ## 配置
@@ -83,13 +85,24 @@
 
 对非内置插件，`allowConversationAccess: true` 是注册 `before_prompt_build` 的必需权限；`allowPromptInjection` 默认允许，若设为 `false` 则此插件不会注入。`groupWhitelist` 可填群 ID 或完整群会话键；空数组表示所有群。`tokenWarningThreshold: 0` 关闭 `/pin list` 的估算提醒，该提醒不是硬预算。
 
-## 安装
+## 本地安装与发布准备
 
-需要 OpenClaw ≥ 2026.10.2。先在本项目目录执行 `npm ci` 和 `npm run build`，再安装：
+需要 OpenClaw ≥ 2026.10.2。本地开发时，先在本项目目录执行 `npm ci` 和 `npm run build`，再安装：
 
 ```bash
 openclaw plugins install -l /path/to/openclaw_plugin_pinned_context
 ```
 
 本地开发可用 `openclaw plugins reload pinned-context` 重新加载插件代码。安装后用 `openclaw plugins inspect pinned-context --runtime --json` 检查 hook 是否注册。
+
+发布包使用 `dist/index.js` 作为入口。提交到 GitHub 的源码不包含 `dist/`；从仓库克隆后需要先构建，不能把未经构建的源码目录当成已发布的安装包。`npm pack` 会自动执行 `prepack` 构建。发布前可在项目目录检查：
+
+```bash
+npm ci
+npm run typecheck
+npm test
+npm pack --dry-run
+```
+
+检查打包清单中包含 `dist/index.js`、`openclaw.plugin.json` 和 `package.json`，且不包含 `test/`、用户数据或凭证。正式发布到 ClawHub 前，还需确定发布者账号及对应的包名，提交包含本次发布代码的 Git commit，再运行 `clawhub package validate <包目录>` 和 `clawhub package publish <包目录> --dry-run`。正式发布会创建公开版本，应在检查结果后再执行。详见 [OpenClaw 插件构建指南](https://docs.openclaw.ai/plugins/building-plugins)及 [ClawHub 发布规则](https://docs.openclaw.ai/clawhub/publishing)。
 

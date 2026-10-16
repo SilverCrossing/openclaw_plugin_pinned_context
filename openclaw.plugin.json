@@ -2,6 +2,7 @@
   "id": "pinned-context",
   "name": "Pinned Context Blocks",
   "description": "用户可控的 strong 与 context 钉选块，支持私聊和群聊作用域",
+  "categories": ["context"],
   "activation": {
     "onStartup": true,
     "onCommands": ["pin"]

@@ -26,10 +26,13 @@ export function resolveScope(identity: PinIdentity, enableInGroup: boolean, whit
   const match = /(?:^|:)group:([^:]+)/iu.exec(sessionKey);
   const groupId = match?.[1];
   if (!groupId) return null;
+  const rawGroupId = sessionKey.slice(match.index + match[0].length - groupId.length);
   // OpenClaw may add topic and sender suffixes to a group session key. A group
   // block belongs to the group itself, independent of those per-message routes.
   const baseKey = sessionKey.slice(0, match.index + match[0].length);
-  if (identity.chatId && identity.chatId !== groupId) return null;
+  // The prompt hook may expose either the native parent chat id or the full
+  // session peer id (including :topic: / :sender: suffixes) as chatId.
+  if (identity.chatId && identity.chatId !== groupId && identity.chatId !== rawGroupId) return null;
   if (whitelist.length > 0 && !whitelist.includes(groupId) && !whitelist.includes(baseKey)) return null;
   return {
     chatType,

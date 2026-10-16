@@ -7,10 +7,7 @@ node_modules/
 dist/
 *.tsbuildinfo
 
-# ⚠️ 注意：dist/ 被忽略后，npm pack 会沿用 .gitignore 作为忽略规则
-#    （未提供 .npmignore 时），导致发布包缺失 dist/index.js，
-#    而 package.json 的 openclaw.runtimeExtensions 指向该文件。
-#    发布前请在 package.json 增加 files 白名单，或补一个 .npmignore。
+# dist/ 不上传 Git；package.json 的 files 白名单会将构建产物放入发布包。
 
 # ── 测试文件 ─────────────────────────────────────────────────
 # 测试目录
@@ -35,6 +32,7 @@ e2e/
 
 # 覆盖率与测试报告
 coverage/
+reports/
 *.lcov
 junit.xml
 
