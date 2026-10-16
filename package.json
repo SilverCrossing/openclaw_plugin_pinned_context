@@ -1,7 +1,7 @@
 {
   "name": "openclaw-plugin-pinned-context",
   "version": "0.1.0",
-  "description": "用户可控的 strong 与 context 钉选块，支持私聊和群聊作用域",
+  "description": "User-managed strong and context blocks for direct and group chats",
   "keywords": ["openclaw", "plugin", "context", "memory", "pinned-context"],
   "repository": {
     "type": "git",
@@ -17,7 +17,7 @@
     "dist",
     "openclaw.plugin.json",
     "README.md",
-    "README.en.md"
+    "README.cn.md"
   ],
   "scripts": {
     "build": "tsc",

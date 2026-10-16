@@ -36,25 +36,25 @@ export class BlockManager {
     level: "strong" | "context" = "strong",
   ): Promise<{ ok: boolean; error?: string; label?: string; status?: string }> {
     if (!VALID_STATUS.includes(status)) {
-      return { ok: false, error: `无效状态: ${status}` };
+      return { ok: false, error: `Invalid status: ${status}` };
     }
 
     label = label.trim().slice(0, this.config.maxLabelLen);
     content = content.trim().slice(0, this.config.maxContentLen);
 
     if (!label || !content) {
-      return { ok: false, error: "标签和内容不能为空" };
+      return { ok: false, error: "Label and content cannot be empty" };
     }
 
     // 检查数量上限
     const count = this.storage.countBlocks(sessionId);
     if (count >= this.config.maxBlocks) {
-      return { ok: false, error: `已达上限（${this.config.maxBlocks} 个块），请先清理` };
+      return { ok: false, error: `Block limit reached (${this.config.maxBlocks}). Remove a block first` };
     }
 
     // 检查标签是否已存在
     if (this.storage.getBlock(sessionId, label)) {
-      return { ok: false, error: `标签'${label}'已存在，使用 /pin edit 修改或 /pin remove 删除` };
+      return { ok: false, error: `Label '${label}' already exists. Use /pin edit to change it or /pin remove to delete it` };
     }
 
     const now = new Date().toISOString();
@@ -76,7 +76,7 @@ export class BlockManager {
 
   async remove(sessionId: string, label: string): Promise<{ ok: boolean; error?: string }> {
     const deleted = await this.storage.removeBlock(sessionId, label);
-    return deleted ? { ok: true } : { ok: false, error: `块'${label}'不存在` };
+    return deleted ? { ok: true } : { ok: false, error: `Block '${label}' does not exist` };
   }
 
   async update(
@@ -86,12 +86,12 @@ export class BlockManager {
   ): Promise<{ ok: boolean; error?: string }> {
     content = content.trim().slice(0, this.config.maxContentLen);
     if (!content) {
-      return { ok: false, error: "内容不能为空" };
+      return { ok: false, error: "Content cannot be empty" };
     }
 
     const now = new Date().toISOString();
     const updated = await this.storage.updateBlock(sessionId, label, { content, updatedAt: now });
-    return updated ? { ok: true } : { ok: false, error: `块'${label}'不存在` };
+    return updated ? { ok: true } : { ok: false, error: `Block '${label}' does not exist` };
   }
 
   // ── 状态管理 ────────────────────────────────────────
@@ -102,7 +102,7 @@ export class BlockManager {
     newStatus: BlockStatus,
   ): Promise<{ ok: boolean; error?: string; status?: string }> {
     if (!VALID_STATUS.includes(newStatus)) {
-      return { ok: false, error: `无效状态: ${newStatus}` };
+      return { ok: false, error: `Invalid status: ${newStatus}` };
     }
 
     const now = new Date().toISOString();
@@ -119,7 +119,7 @@ export class BlockManager {
     }
 
     const updated = await this.storage.updateBlock(sessionId, label, updates);
-    return updated ? { ok: true, status: newStatus } : { ok: false, error: `块'${label}'不存在` };
+    return updated ? { ok: true, status: newStatus } : { ok: false, error: `Block '${label}' does not exist` };
   }
 
   async setLevel(sessionId: string, label: string, level: "strong" | "context") {
@@ -127,7 +127,7 @@ export class BlockManager {
       level,
       updatedAt: new Date().toISOString(),
     });
-    return updated ? { ok: true } : { ok: false, error: `块'${label}'不存在` };
+    return updated ? { ok: true } : { ok: false, error: `Block '${label}' does not exist` };
   }
 
   // ── 查询 ────────────────────────────────────────────

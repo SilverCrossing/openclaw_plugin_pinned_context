@@ -1,7 +1,7 @@
 {
   "id": "pinned-context",
   "name": "Pinned Context Blocks",
-  "description": "用户可控的 strong 与 context 钉选块，支持私聊和群聊作用域",
+  "description": "User-managed strong and context blocks for direct and group chats",
   "categories": ["context"],
   "activation": {
     "onStartup": true,
@@ -11,21 +11,21 @@
     "type": "object",
     "additionalProperties": false,
     "properties": {
-      "maxBlocksPerSession": { "type": "integer", "default": 20, "description": "每个会话最多钉选块数" },
-      "maxLabelLength": { "type": "integer", "default": 20, "description": "单个块标签最大长度" },
-      "maxContentLength": { "type": "integer", "default": 500, "description": "单个块内容最大长度" },
-      "idleRetentionDays": { "type": "integer", "default": 7, "description": "idle 块保留天数" },
-      "idleRetentionCalls": { "type": "integer", "default": 10, "description": "idle 块保留 LLM 调用次数" },
-      "idleHardRetentionDays": { "type": "integer", "default": 30, "description": "idle 块最长保留天数" },
-      "tokenWarningThreshold": { "type": "integer", "default": 1000, "description": "token 警告阈值（0=不检查）" },
+      "maxBlocksPerSession": { "type": "integer", "default": 20, "description": "Maximum blocks per scope" },
+      "maxLabelLength": { "type": "integer", "default": 20, "description": "Maximum label length per block" },
+      "maxContentLength": { "type": "integer", "default": 500, "description": "Maximum content length per block" },
+      "idleRetentionDays": { "type": "integer", "default": 7, "description": "Days before an idle block is eligible for cleanup" },
+      "idleRetentionCalls": { "type": "integer", "default": 10, "description": "Additional model calls before an idle block is eligible for cleanup" },
+      "idleHardRetentionDays": { "type": "integer", "default": 30, "description": "Maximum days to retain an idle block" },
+      "tokenWarningThreshold": { "type": "integer", "default": 1000, "description": "Estimated token warning threshold (0 disables warnings)" },
       "enableInGroup": {
         "type": "boolean",
         "default": false,
-        "description": "是否在群聊中启用；频道和类型不明会话始终禁用"
+        "description": "Enable group chats; channel chats and chats of unknown type remain disabled"
       },
-      "groupWhitelist": { "type": "array", "items": { "type": "string" }, "default": [], "description": "允许的群 ID 或完整群会话键，空数组表示所有群" },
-      "groupSharedAdminIds": { "type": "array", "items": { "type": "string" }, "default": [], "description": "可管理群共享块的发送者 ID" },
-      "groupStrongUserIds": { "type": "array", "items": { "type": "string" }, "default": [], "description": "可管理群个人 strong 块的发送者 ID" }
+      "groupWhitelist": { "type": "array", "items": { "type": "string" }, "default": [], "description": "Allowed group IDs or full group session keys; empty allows all groups" },
+      "groupSharedAdminIds": { "type": "array", "items": { "type": "string" }, "default": [], "description": "Sender IDs allowed to manage shared group blocks" },
+      "groupStrongUserIds": { "type": "array", "items": { "type": "string" }, "default": [], "description": "Sender IDs allowed to manage personal strong blocks in groups" }
     }
   }
 }

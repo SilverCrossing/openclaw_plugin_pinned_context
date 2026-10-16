@@ -58,8 +58,8 @@ function readStrings(cfg: Record<string, unknown>, key: string): string[] {
 
 /** 生成"会话类型不允许"的说明文本 */
 function rejectText(chatType: ChatType): string {
-  const name = chatType === "unknown" ? "无法判定类型" : chatType === "group" ? "群聊" : "频道";
-  return `❌ ${name}会话不可用，或缺少可信的群 ID / 发言人 ID，或该群不在白名单中。`;
+  const name = chatType === "unknown" ? "unknown-type" : chatType === "group" ? "group" : "channel";
+  return `❌ /pin is unavailable in this ${name} chat. The chat may be disabled, lack a trusted group or sender ID, or be outside the group allowlist.`;
 }
 
 // ── 插件入口 ──────────────────────────────────────────
@@ -67,7 +67,7 @@ function rejectText(chatType: ChatType): string {
 export default definePluginEntry({
   id: "pinned-context",
   name: "Pinned Context Blocks",
-  description: "用户可控的 strong 与 context 钉选块，支持私聊和群聊作用域",
+  description: "User-managed strong and context blocks for direct and group chats",
 
   register(api: OpenClawPluginApi) {
     // ── 初始化组件 ────────────────────────────────────
@@ -98,12 +98,12 @@ export default definePluginEntry({
       if (warnedSessions.size >= 200) warnedSessions.clear();
       warnedSessions.add(sessionKey);
       api.logger?.warn?.(
-        `[钉选上下文] 会话 ${sessionKey} 的 chatType 判定为 ${chatType}，` +
-          `已按 fail-closed 策略跳过注入。请检查频道会话键。`,
+        `[pinned-context] Session ${sessionKey} has chat type ${chatType}; ` +
+          `fail-closed: injection was skipped. Check the channel session key.`,
       );
     };
 
-    api.logger?.info?.("[钉选上下文] 插件初始化完成");
+    api.logger?.info?.("[pinned-context] Plugin initialized");
 
     // ── 1. before_prompt_build hook — 注入钉选块 ──────
     //
@@ -152,7 +152,7 @@ export default definePluginEntry({
     // ── 2. /pin 命令 — CRUD 操作 ──────────────────────
     api.registerCommand({
       name: "pin",
-      description: "管理钉选上下文块",
+      description: "Manage pinned context blocks",
       // acceptsArgs 必须是 true：否则带参数的调用会被判定为 non-plugin 命令
       // 并静默漏过（plugin-command-runtime 的 prepareDispatch）。
       acceptsArgs: true,
@@ -164,7 +164,7 @@ export default definePluginEntry({
       handler: async (ctx) => {
         const sessionKey = ctx.sessionKey ?? "";
         if (!sessionKey) {
-          return { text: "❌ 无法获取会话标识，操作已取消。" };
+          return { text: "❌ Unable to identify this chat. Operation cancelled." };
         }
 
         const chatType = deriveChatType(sessionKey, ctx.channel);
@@ -173,28 +173,28 @@ export default definePluginEntry({
         }, enableInGroup, groupWhitelist);
         if (!scope) return { text: rejectText(chatType) };
         if (scope.chatType === "direct" && !ctx.isAuthorizedSender) {
-          return { text: "❌ 仅授权发送者可以管理私聊钉选块。" };
+          return { text: "❌ Only authorized senders can manage blocks in direct chats." };
         }
         const parsed = parsePinArgs(ctx.args);
         const shared = parsed.subcommand === "shared";
-        if (shared && !scope.sharedKey) return { text: "❌ shared 仅用于群聊。" };
+        if (shared && !scope.sharedKey) return { text: "❌ /pin shared is available only in group chats." };
         const { subcommand, rest } = shared ? parsePinArgs(parsed.rest) : parsed;
         const key = shared ? scope.sharedKey! : scope.personalKey;
         const sender = ctx.senderId?.trim() ?? "";
         const canSharedWrite = senderAllowed(sharedAdmins, scope, sender);
         const canStrong = canSharedWrite || senderAllowed(strongUsers, scope, sender);
         if (shared && subcommand !== "list" && subcommand !== "help" && !canSharedWrite) {
-          return { text: "❌ 仅配置的群共享管理员可修改共享块。" };
+          return { text: "❌ Only configured shared-block administrators can change shared blocks." };
         }
         if (scope.chatType === "group" && !shared && !canStrong && subcommand === "clear" &&
             Object.values(blockMgr.listAll(key)).flat().some((block) => block.level === "strong")) {
-          return { text: "❌ 当前作用域包含 strong 块，仅授权用户可清空。" };
+          return { text: "❌ This scope contains strong blocks. Only authorized users can clear it." };
         }
         if (scope.chatType === "group" && !shared && !canStrong &&
             ["edit", "remove", "idle", "activate", "pin", "unpin", "level"].includes(subcommand)) {
           const label = rest.split(/\s+/u)[0];
           const existing = Object.values(blockMgr.listAll(key)).flat().find((block) => block.label === label);
-          if (existing?.level === "strong") return { text: "❌ 当前块是 strong，仅授权用户可修改。" };
+          if (existing?.level === "strong") return { text: "❌ Only authorized users can change this strong block." };
         }
 
         try {
@@ -209,7 +209,7 @@ export default definePluginEntry({
               const level = subcommand === "add-strong" ? "strong" : subcommand === "add-context"
                 ? "context" : scope.chatType === "group" ? "context" : "strong";
               if (scope.chatType === "group" && !shared && level === "strong" && !canStrong) {
-                text = "❌ 仅配置的群个人 strong 授权用户可新增强约束。";
+                text = "❌ Only users authorized for personal strong blocks can add one in a group.";
               } else {
                 text = await cmdAdd(blockMgr, key, rest, level);
               }
@@ -227,26 +227,26 @@ export default definePluginEntry({
             case "level": {
               const [label, level] = rest.split(/\s+/u);
               if (!label || (level !== "strong" && level !== "context")) {
-                text = "用法: /pin level <标签> strong|context";
+                text = "Usage: /pin level <label> strong|context";
               } else if (scope.chatType === "group" && !shared && level === "strong" && !canStrong) {
-                text = "❌ 仅配置的群个人 strong 授权用户可设置强约束。";
+                text = "❌ Only users authorized for personal strong blocks can set this level in a group.";
               } else {
                 const result = await blockMgr.setLevel(key, label, level);
-                text = result.ok ? `✅ 已设置 ${label} 为 ${level}` : `❌ ${result.error}`;
+                text = result.ok ? `✅ Set '${label}' to ${level}` : `❌ ${result.error}`;
               }
               break;
             }
             case "idle":
-              text = await cmdSetStatus(blockMgr, key, rest, "idle", "idle", "💤 已停用");
+              text = await cmdSetStatus(blockMgr, key, rest, "idle", "idle", "💤 Deactivated");
               break;
             case "activate":
-              text = await cmdSetStatus(blockMgr, key, rest, "active", "activate", "🟢 已激活");
+              text = await cmdSetStatus(blockMgr, key, rest, "active", "activate", "🟢 Activated");
               break;
             case "pin":
-              text = await cmdSetStatus(blockMgr, key, rest, "pinned", "pin", "🔒 已锚定");
+              text = await cmdSetStatus(blockMgr, key, rest, "pinned", "pin", "🔒 Pinned");
               break;
             case "unpin":
-              text = await cmdSetStatus(blockMgr, key, rest, "active", "unpin", "🟢 已取消锚定");
+              text = await cmdSetStatus(blockMgr, key, rest, "active", "unpin", "🟢 Unpinned");
               break;
             case "clear":
               text = await cmdClear(blockMgr, key, rest);
@@ -255,13 +255,13 @@ export default definePluginEntry({
               text = helpText();
               break;
             default:
-              text = `未知子命令: ${subcommand}\n\n` + helpText();
+              text = `Unknown subcommand: ${subcommand}\n\n` + helpText();
           }
           // ReplyPayload 的文本字段是 text（没有 content 字段）
           return { text };
         } catch (e: any) {
-          api.logger?.error?.(`[钉选上下文] 命令执行失败: ${e?.message ?? e}`);
-          return { text: `操作失败: ${e?.message ?? e}` };
+          api.logger?.error?.(`[pinned-context] Command failed: ${e?.message ?? e}`);
+          return { text: `Operation failed: ${e?.message ?? e}` };
         }
       },
     });
@@ -274,32 +274,32 @@ async function cmdAdd(mgr: BlockManager, sessionKey: string, rest: string, level
   const { text: body, pinned } = extractPinnedFlag(rest);
   const match = /^(\S+)\s+([\s\S]+)$/u.exec(body);
   if (!match) {
-    return "用法: /pin add <标签> <内容> [--pinned]";
+    return "Usage: /pin add <label> <content> [--pinned]";
   }
   const label = match[1];
   const content = match[2].trim();
   const status = pinned ? "pinned" : "active";
   const result = await mgr.add(sessionKey, label, content, status, level);
-  return result.ok ? `✅ 已钉选: 【${label}】（${level} / ${status}）` : `❌ ${result.error}`;
+  return result.ok ? `✅ Added '${label}' (${level} / ${status})` : `❌ ${result.error}`;
 }
 
 function cmdList(mgr: BlockManager, sessionKey: string, tokenThreshold: number): string {
   const grouped = mgr.listAll(sessionKey);
   const total = grouped.active.length + grouped.idle.length + grouped.pinned.length;
   if (total === 0) {
-    return "当前没有任何钉选块。使用 /pin add <标签> <内容> 创建。";
+    return "No pinned context blocks yet. Use /pin add <label> <content> to create one.";
   }
 
-  const lines: string[] = [`📌 钉选上下文块（共 ${total} 个）\n`];
+  const lines: string[] = [`📌 Pinned context blocks (${total} total)\n`];
   const icons: Record<string, string> = { active: "🟢", idle: "💤", pinned: "🔒" };
 
   for (const status of ["pinned", "active", "idle"] as const) {
     const blocks = grouped[status];
     if (!blocks || blocks.length === 0) continue;
-    lines.push(`${icons[status]} ${status}（${blocks.length} 个）:`);
+    lines.push(`${icons[status]} ${status} (${blocks.length}):`);
     for (const b of blocks) {
       const preview = b.content.length > 60 ? b.content.slice(0, 60) + "..." : b.content;
-      lines.push(`  【${b.label}】[${b.level}] ${preview}`);
+      lines.push(`  [${b.label}] [${b.level}] ${preview}`);
     }
     lines.push("");
   }
@@ -313,7 +313,7 @@ function cmdList(mgr: BlockManager, sessionKey: string, tokenThreshold: number):
     );
     const estTokens = Math.floor(estChars * 1.5);
     if (estTokens > tokenThreshold) {
-      lines.push(`⚠️ 估算注入 token: ~${estTokens}，建议停用不常用的块。`);
+      lines.push(`⚠️ Estimated injected tokens: ~${estTokens}. Consider deactivating unused blocks.`);
     }
   }
 
@@ -321,18 +321,18 @@ function cmdList(mgr: BlockManager, sessionKey: string, tokenThreshold: number):
 }
 
 async function cmdRemove(mgr: BlockManager, sessionKey: string, label: string): Promise<string> {
-  if (!label) return "用法: /pin remove <标签>";
+  if (!label) return "Usage: /pin remove <label>";
   const result = await mgr.remove(sessionKey, label);
-  return result.ok ? `✅ 已删除: ${label}` : `❌ ${result.error}`;
+  return result.ok ? `✅ Removed: ${label}` : `❌ ${result.error}`;
 }
 
 async function cmdEdit(mgr: BlockManager, sessionKey: string, rest: string): Promise<string> {
   const match = /^(\S+)\s+([\s\S]+)$/u.exec(rest);
-  if (!match) return "用法: /pin edit <标签> <新内容>";
+  if (!match) return "Usage: /pin edit <label> <new content>";
   const label = match[1];
   const content = match[2];
   const result = await mgr.update(sessionKey, label, content);
-  return result.ok ? `✅ 已更新: ${label}` : `❌ ${result.error}`;
+  return result.ok ? `✅ Updated: ${label}` : `❌ ${result.error}`;
 }
 
 async function cmdSetStatus(
@@ -343,7 +343,7 @@ async function cmdSetStatus(
   subcommand: string,
   successMsg: string,
 ): Promise<string> {
-  if (!label) return `用法: /pin ${subcommand} <标签>`;
+  if (!label) return `Usage: /pin ${subcommand} <label>`;
   const result = await mgr.setStatus(sessionKey, label, status);
   return result.ok ? `${successMsg}: ${label}` : `❌ ${result.error}`;
 }
@@ -354,39 +354,41 @@ async function cmdClear(mgr: BlockManager, sessionKey: string, confirm: string):
   const pinnedCount = grouped.pinned.length;
 
   if (confirm.trim().toLowerCase() !== "confirm") {
-    let hint = `⚠️ 将删除全部 ${total} 个钉选块`;
-    if (pinnedCount > 0) hint += `（其中含 ${pinnedCount} 个 🔒 pinned 块）`;
-    hint += "。输入 /pin clear confirm 确认。";
+    let hint = `⚠️ This will remove all ${total} block${total === 1 ? "" : "s"}`;
+    if (pinnedCount > 0) hint += `, including ${pinnedCount} 🔒 pinned block${pinnedCount === 1 ? "" : "s"}`;
+    hint += ". Enter /pin clear confirm to proceed.";
     return hint;
   }
 
   const count = await mgr.clear(sessionKey);
-  return `✅ 已清空 ${count} 个钉选块。`;
+  return `✅ Cleared ${count} block${count === 1 ? "" : "s"}.`;
 }
 
 function helpText(): string {
-  return `📌 钉选上下文块 — 命令帮助
+  return `📌 Pinned Context Blocks — command help
 
-/pin add <标签> <内容>            新增块（默认 active）
-/pin add <标签> <内容> --pinned   新增为长期锚定块
-/pin add-strong <标签> <内容>      新增强约束
-/pin add-context <标签> <内容>     新增参考上下文
-/pin level <标签> strong|context  切换注入级别
-/pin list                          列出所有块（按状态分组）
-/pin remove <标签>                 删除块
-/pin edit <标签> <新内容>          编辑块
-/pin idle <标签>                   停用（→ 闲置，后续自动清理）
-/pin activate <标签>               重新激活闲置块
-/pin pin <标签>                    长期锚定（永不过期）
-/pin unpin <标签>                  取消锚定
-/pin clear                         清空全部（需二次确认）
-/pin shared <子命令>              群共享块（仅配置的共享管理员可修改）
+/pin add <label> <content>                 Add a block (active by default)
+/pin add <label> <content> --pinned        Add a block retained until manual removal
+/pin add <label> -- <literal content>      Preserve a trailing --pinned as content
+/pin add-strong <label> <content>          Add a strong constraint
+/pin add-context <label> <content>         Add reference context
+/pin level <label> strong|context          Change the injection level
+/pin list                                  List blocks by state
+/pin remove <label>                        Remove a block
+/pin edit <label> <new content>            Edit a block
+/pin idle <label>                          Deactivate a block for later cleanup
+/pin activate <label>                      Reactivate an idle block
+/pin pin <label>                           Retain a block until manual removal
+/pin unpin <label>                         Return a pinned block to active
+/pin clear                                 Clear all blocks (confirmation required)
+/pin shared <subcommand>                   Group shared blocks (only configured administrators may change them)
+/pin help                                  Show this help
 
-状态说明：
-🟢 active  正常注入，不会被自动清理
-💤 idle    不注入，闲置 7 天+10 轮或满 30 天后自动删除
-🔒 pinned  长期锚定，永不过期，仅手动删除
+States:
+🟢 active  Injected normally; never removed automatically
+💤 idle    Not injected; removed after 7 days and 10 calls, or after 30 days
+🔒 pinned  Retained indefinitely; only removed manually
 
-会话范围：私聊默认生效。群聊需设置 enableInGroup: true；
-频道和无法判定类型的会话始终禁用。`;
+Scope: Direct chats are enabled by default. Group chats require enableInGroup: true.
+Channel chats and chats of unknown type are always disabled.`;
 }
